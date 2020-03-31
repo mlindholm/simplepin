@@ -9,7 +9,7 @@
 import UIKit
 
 class BookmarkTableViewCell: UITableViewCell {
-    let defaults = NSUserDefaults(suiteName: "group.ml.simplepin")!
+    let defaults = UserDefaults(suiteName: "group.ml.simplepin")!
 
     @IBOutlet var titleLabel: UILabel!
     @IBOutlet var descriptionLabel: UILabel!
@@ -21,19 +21,19 @@ class BookmarkTableViewCell: UITableViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
 
-        privateIndicator.image = privateIndicator.image?.imageWithRenderingMode(.AlwaysTemplate)
-        privateIndicator.tintColor = UIColor.grayColor()
+        privateIndicator.image = privateIndicator.image?.withRenderingMode(.alwaysTemplate)
+        privateIndicator.tintColor = UIColor.gray
 
-        unreadIndicator.image = unreadIndicator.image?.imageWithRenderingMode(.AlwaysTemplate)
+        unreadIndicator.image = unreadIndicator.image?.withRenderingMode(.alwaysTemplate)
         unreadIndicator.tintColor = Colors.Blue
 
-        if defaults.boolForKey("boldTitleFont") == true {
-            titleLabel.font = UIFont.preferredFontForTextStyle(UIFontTextStyleHeadline)
+        if defaults.bool(forKey: "boldTitleFont") == true {
+            titleLabel.font = UIFont.preferredFont(forTextStyle: UIFont.TextStyle.headline)
         }
     }
 
     func setCollectionViewDataSourceDelegate
-        <D: protocol<UICollectionViewDataSource, UICollectionViewDelegate>>
+        <D: UICollectionViewDataSource & UICollectionViewDelegate>
         (dataSourceDelegate: D, forRow row: Int) {
 
         collectionView.delegate = dataSourceDelegate

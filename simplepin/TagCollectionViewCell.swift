@@ -15,22 +15,22 @@ class TagCollectionViewCell: UICollectionViewCell  {
         super.layoutSubviews()
 
         guard let string = tagLabel.text else { return }
-        let index = string.startIndex.advancedBy(0)
+        let index = string.startIndex...string.index(string.startIndex, offsetBy: 0)
 
         tagLabel.layer.masksToBounds = true
         tagLabel.layer.cornerRadius = 2
         tagLabel.layer.borderWidth = 0.5
 
         if string[index] == "." {
-            tagLabel.textColor = UIColor.darkGrayColor()
-            tagLabel.highlightedTextColor = UIColor.darkGrayColor()
-            tagLabel.backgroundColor = UIColor.groupTableViewBackgroundColor()
-            tagLabel.layer.borderColor = UIColor.blueColor().colorWithAlphaComponent(0.12).CGColor
+            tagLabel.textColor = UIColor.darkGray
+            tagLabel.highlightedTextColor = UIColor.darkGray
+            tagLabel.backgroundColor = UIColor.groupTableViewBackground
+            tagLabel.layer.borderColor = UIColor.blue.withAlphaComponent(0.12).cgColor
         } else {
             tagLabel.textColor = Colors.Blue
             tagLabel.highlightedTextColor = Colors.Blue
             tagLabel.backgroundColor = Colors.LightBlue
-            tagLabel.layer.borderColor = Colors.DarkBlue.colorWithAlphaComponent(0.12).CGColor
+            tagLabel.layer.borderColor = Colors.DarkBlue.withAlphaComponent(0.12).cgColor
         }
     }
 }

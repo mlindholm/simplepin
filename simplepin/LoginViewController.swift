@@ -12,9 +12,9 @@ import Crashlytics
 import SafariServices
 
 class LoginViewController: UIViewController {
-    let defaults = NSUserDefaults(suiteName: "group.ml.simplepin")!
-    let notifications = NSNotificationCenter.defaultCenter()
-    var fetchApiTokenTask: NSURLSessionTask?
+    let defaults = UserDefaults(suiteName: "group.ml.simplepin")!
+    let notifications = NotificationCenter.default
+    var fetchApiTokenTask: URLSessionTask?
     var tokenLogin = false
 
     @IBOutlet var usernameField: UITextField!
@@ -34,12 +34,12 @@ class LoginViewController: UIViewController {
         usernameField.delegate = self
         passwordField.delegate = self
 
-        onepasswordButton.hidden = (false == OnePasswordExtension.sharedExtension().isAppExtensionAvailable())
-        onepasswordButton.imageView?.contentMode = .ScaleAspectFit
+        onepasswordButton.isHidden = (false == OnePasswordExtension.shared().isAppExtensionAvailable())
+        onepasswordButton.imageView?.contentMode = .scaleAspectFit
 
-        notifications.addObserver(self, selector: #selector(self.keyboardWillShow(_:)), name: UIKeyboardWillShowNotification, object: nil)
-        notifications.addObserver(self, selector: #selector(self.keyboardWillHide(_:)), name: UIKeyboardWillHideNotification, object: nil)
-        notifications.addObserverForName("handleRequestError", object: nil, queue: nil, usingBlock: handleRequestError)
+        notifications.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        notifications.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+        notifications.addObserver(forName: NSNotification.Name(rawValue: "handleRequestError"), object: nil, queue: nil, using: handleRequestError)
     }
 
     // MARK: - Login
@@ -47,14 +47,18 @@ class LoginViewController: UIViewController {
     func loginFailed(title: String) {
         self.spinner.alpha = CGFloat(0.0)
         self.spinner.stopAnimating()
-        self.loginButton.enabled = true
-        self.alertErrorWithReachability(title, message: nil)
+        self.loginButton.isEnabled = true
+        self.alertErrorWithReachability(title: title, message: nil)
     }
 
     // MARK: - Actions
 
-    @IBAction func loginButtonPressed(sender: AnyObject?) {
-        loginButton.enabled = false
+    @IBAction func loginButtonPressed(_ sender: Any) {
+        actionLogin()
+    }
+    
+    func actionLogin() {
+        loginButton.isEnabled = false
 
         guard let password = passwordField.text,
             let username = usernameField.text else {
@@ -62,15 +66,15 @@ class LoginViewController: UIViewController {
         }
 
         if password.isEmpty || username.isEmpty {
-            loginButton.enabled = true
+            loginButton.isEnabled = true
 
             if tokenLogin == true {
                 if password.isEmpty {
-                    self.alertError("Please Enter Your API Token", message: nil)
+                    self.alertError(title: "Please Enter Your API Token", message: nil)
                     return
                 }
             } else {
-                self.alertError("Please Enter Your Username and Password", message: nil)
+                self.alertError(title: "Please Enter Your Username and Password", message: nil)
                 return
             }
         }
@@ -80,129 +84,127 @@ class LoginViewController: UIViewController {
 
         switch tokenLogin {
         case true:
-            fetchApiTokenTask = Network.loginWithApiToken(password) { result in
+            fetchApiTokenTask = Network.loginWithApiToken(token: password) { result in
                 if result != nil {
                     let token = password.removeExcessiveSpaces
-                    let username = token.componentsSeparatedByString(":").first
-                    self.defaults.setObject(token, forKey: "userToken")
-                    self.defaults.setObject(username, forKey: "userName")
-                    NSNotificationCenter.defaultCenter().postNotificationName("loginSuccessful", object: nil)
-                    self.dismissViewControllerAnimated(true, completion: nil)
-                    Answers.logLoginWithMethod("API Token", success: true, customAttributes: [:])
+                    let username = token.components(separatedBy: ":").first
+                    self.defaults.set(token, forKey: "userToken")
+                    self.defaults.set(username, forKey: "userName")
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "loginSuccessful"), object: nil)
+                    self.dismiss(animated: true, completion: nil)
+                    Answers.logLogin(withMethod: "API Token", success: true, customAttributes: [:])
                 } else {
-                    self.loginFailed("Incorrect API Token")
+                    self.loginFailed(title: "Incorrect API Token")
                     return
                 }
             }
         default:
-            fetchApiTokenTask = Network.loginWithUsernamePassword(username, password) { result in
+            fetchApiTokenTask = Network.loginWithUsernamePassword(username: username, password) { result in
                 if let token = result {
                     let token = username + ":" + token
-                    self.defaults.setObject(token, forKey: "userToken")
-                    self.defaults.setObject(username, forKey: "userName")
-                    NSNotificationCenter.defaultCenter().postNotificationName("loginSuccessful", object: nil)
-                    self.dismissViewControllerAnimated(true, completion: nil)
-                    Answers.logLoginWithMethod("Username and Password", success: true, customAttributes: [:])
+                    self.defaults.set(token, forKey: "userToken")
+                    self.defaults.set(username, forKey: "userName")
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "loginSuccessful"), object: nil)
+                    self.dismiss(animated: true, completion: nil)
+                    Answers.logLogin(withMethod: "Username and Password", success: true, customAttributes: [:])
                 } else {
-                    self.loginFailed("Incorrect Username or Password")
+                    self.loginFailed(title: "Incorrect Username or Password")
                     return
                 }
             }
         }
     }
-
-    @IBAction func forgotPasswordButtonPressed(sender: AnyObject) {
+    
+    @IBAction func forgotPasswordButtonTapped(_ sender: Any) {
         let urlString = self.tokenLogin == true ? "https://m.pinboard.in/settings/password" : "https://m.pinboard.in/password_reset/"
-        let url = NSURL(string: urlString)
-        UIApplication.sharedApplication().openURL(url!)
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
     }
-
-    @IBAction func loginMethodSegmentPressed(sender: AnyObject) {
+    
+    @IBAction func loginMethodSegmentTaped(_ sender: Any) {
         passwordField.text = ""
 
         switch loginMethodSegment.selectedSegmentIndex {
         case 0:
             tokenLogin = false
-            forgotPasswordButton.setTitle("Forgot Password?", forState: .Normal)
-            usernameField.hidden = false
+            forgotPasswordButton.setTitle("Forgot Password?", for: .normal)
+            usernameField.isHidden = false
             passwordField.placeholder = "Password"
         case 1:
             tokenLogin = true
-            forgotPasswordButton.setTitle("Show API Token", forState: .Normal)
-            usernameField.hidden = true
+            forgotPasswordButton.setTitle("Show API Token", for: .normal)
+            usernameField.isHidden = true
             passwordField.placeholder = "Username:Token"
         default:
             break
         }
     }
+    
+    @IBAction func findLoginFrom1Password(_ sender: Any) {
+        OnePasswordExtension.shared().findLogin(forURLString: "https://pinboard.in", for: self, sender: sender, completion: { (loginDictionary, error) -> Void in
+                    if loginDictionary == nil {
+        //                if error!.code != Int(AppExtensionErrorCodeCancelledByUser) {
+        //                    print("Error invoking 1Password App Extension for find login: \(error)")
+        //                }
+                        return
+                    }
 
-    @IBAction func findLoginFrom1Password(sender: AnyObject) -> Void {
-        OnePasswordExtension.sharedExtension().findLoginForURLString("https://pinboard.in", forViewController: self, sender: sender, completion: { (loginDictionary, error) -> Void in
-            if loginDictionary == nil {
-                if error!.code != Int(AppExtensionErrorCodeCancelledByUser) {
-                    print("Error invoking 1Password App Extension for find login: \(error)")
-                }
-                return
-            }
+                    self.usernameField.text = loginDictionary?[AppExtensionUsernameKey] as? String
+                    self.passwordField.text = loginDictionary?[AppExtensionPasswordKey] as? String
 
-            self.usernameField.text = loginDictionary?[AppExtensionUsernameKey] as? String
-            self.passwordField.text = loginDictionary?[AppExtensionPasswordKey] as? String
-
-            self.loginButtonPressed(nil)
-        })
-
+                    self.actionLogin()
+                })
     }
 
     //MARK: - Events
-
-
-    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         usernameField.resignFirstResponder()
         passwordField.resignFirstResponder()
     }
 
-    func keyboardWillShow(notification: NSNotification) {
+    @objc func keyboardWillShow(notification: Notification) {
         guard let userInfo = notification.userInfo else { return }
-        let keyboardEndFrame = (userInfo[UIKeyboardFrameEndUserInfoKey] as! NSValue).CGRectValue()
-        let convertedKeyboardEndFrame = view.convertRect(keyboardEndFrame, fromView: view.window)
+        let keyboardEndFrame = (userInfo[UIResponder.keyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+        let convertedKeyboardEndFrame = view.convert(keyboardEndFrame, from: view.window)
 
-        self.stackBottomConstraint.constant = CGRectGetMaxY(view.bounds) - CGRectGetMinY(convertedKeyboardEndFrame) + 8
-        UIView.animateWithDuration(0.1) {
+        self.stackBottomConstraint.constant = view.bounds.maxY - convertedKeyboardEndFrame.minY + 8
+        UIView.animate(withDuration: 0.1) {
             self.view.layoutSubviews()
         }
     }
 
-    func keyboardWillHide(notification: NSNotification) {
+    @objc func keyboardWillHide(notification: Notification) {
         stackBottomConstraint.constant = 16
-        UIView.animateWithDuration(0.1) {
+        UIView.animate(withDuration: 0.1) {
             self.view.layoutSubviews()
         }
     }
 
-    func handleRequestError(notification: NSNotification) {
+    func handleRequestError(notification: Notification) {
         if let info = notification.userInfo as? Dictionary<String, String> {
             guard let title = info["title"],
                 let message = info["message"] else {
                     return
             }
-            alertError(title, message: message)
+            alertError(title: title, message: message)
         }
     }
 
     deinit {
-        notifications.removeObserver(self, name: UIKeyboardWillShowNotification, object: nil)
-        notifications.removeObserver(self, name: UIKeyboardWillHideNotification, object: nil)
-        notifications.removeObserver(self, name: "handleRequestError", object: nil)
+        notifications.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        notifications.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
+        notifications.removeObserver(self, name: NSNotification.Name(rawValue: "handleRequestError"), object: nil)
     }
 }
 
 // MARK: - UITextFieldDelegate
 extension LoginViewController: UITextFieldDelegate {
-    func textFieldShouldReturn(textField: UITextField) -> Bool {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         if textField == usernameField {
             passwordField.becomeFirstResponder()
         } else if textField == passwordField {
-            loginButtonPressed(nil)
+            actionLogin()
         }
         return true
     }

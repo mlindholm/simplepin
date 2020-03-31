@@ -8,69 +8,57 @@
 
 import Foundation
 
-extension NSDate {
+extension Date {
     var dateToString: String {
-        let formatter = NSDateFormatter()
+        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-        return formatter.stringFromDate(self)
+        return formatter.string(from: self)
     }
 
     func timeAgo() -> String {
-        let calendar = NSCalendar.currentCalendar()
-        let now = NSDate()
-        let unitFlags: NSCalendarUnit = [.Minute, .Hour, .Day]
-        let components = calendar.components(unitFlags, fromDate: self, toDate: now, options: [])
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: self, to: now)
 
-        let componentsFormatter = NSDateComponentsFormatter()
-        componentsFormatter.calendar?.locale = NSLocale(localeIdentifier: "en")
+        let componentsFormatter = DateComponentsFormatter()
+        componentsFormatter.calendar?.locale = Locale(identifier: "en")
 
-        let formatter = NSDateFormatter()
-        formatter.locale = NSLocale(localeIdentifier: "en")
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en")
         formatter.dateFormat = "MMMM yyyy"
 
-        func formatTimeAgo(unit: NSCalendarUnit) -> String {
+        func formatTimeAgo(unit: NSCalendar.Unit) -> String {
             componentsFormatter.allowedUnits = unit
-            componentsFormatter.unitsStyle = .Full
-            guard let string = componentsFormatter.stringFromDate(self, toDate: now) else { return "" }
+            componentsFormatter.unitsStyle = .full
+            guard let string = componentsFormatter.string(from: self, to: now) else { return "" }
             return string + " ago"
         }
-
-        if components.day > 90 {
-            return formatter.stringFromDate(self)
+        
+        guard let componentsDay = components.day, let componentsHour = components.hour, let componentsMinute = components.minute else {
+            return "No day in date"
         }
 
-        if components.day > 21 {
-            return formatTimeAgo(.WeekOfMonth)
+        if componentsDay > 90 {
+            return formatter.string(from: self)
         }
 
-        if components.day > 0 {
-            return formatTimeAgo(.Day)
+        if componentsDay > 21 {
+            return formatTimeAgo(unit: .weekOfMonth)
         }
 
-        if components.hour > 0 {
-            return formatTimeAgo(.Hour)
+        if componentsDay > 0 {
+            return formatTimeAgo(unit: .day)
         }
 
-        if components.minute > 0 {
-            return formatTimeAgo(.Minute)
+        if componentsHour > 0 {
+            return formatTimeAgo(unit: .hour)
+        }
+
+        if componentsMinute > 0 {
+            return formatTimeAgo(unit: .minute)
         }
 
         return "Just now"
     }
 
 }
-
-extension NSDate: Comparable {}
-
-public func >(lhs: NSDate, rhs: NSDate) -> Bool {
-    return lhs.compare(rhs) == .OrderedDescending
-}
-
-public func ==(lhs: NSDate, rhs: NSDate) -> Bool {
-    return lhs === rhs || lhs.compare(rhs) == .OrderedSame
-}
-
-public func <(lhs: NSDate, rhs: NSDate) -> Bool {
-    return lhs.compare(rhs) == .OrderedAscending
-}
-

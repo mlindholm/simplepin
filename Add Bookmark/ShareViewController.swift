@@ -26,28 +26,28 @@ struct Bookmark {
 }
 
 class ShareViewController: SLComposeServiceViewController, OptionsTableViewDelegate {
-    let groupDefaults = NSUserDefaults(suiteName: "group.ml.simplepin")!
-    var addBookmarkTask: NSURLSessionTask?
+    let groupDefaults = UserDefaults(suiteName: "group.ml.simplepin")!
+    var addBookmarkTask: URLSessionTask?
     var bookmark = Bookmark()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         getUrl()
-        bookmark.personal = groupDefaults.boolForKey("privateByDefault")
-        bookmark.toread = groupDefaults.boolForKey("toreadByDefault")
+        bookmark.personal = groupDefaults.bool(forKey: "privateByDefault")
+        bookmark.toread = groupDefaults.bool(forKey: "toreadByDefault")
 
-        if groupDefaults.stringForKey("userToken") == nil {
-            let alert = UIAlertController(title: "Please Log In", message: "Sharing requires you to be logged in. Open Simplepin, log in and try again.", preferredStyle: UIAlertControllerStyle.Alert)
-            alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Cancel, handler: { _ in self.cancel() }))
-            self.presentViewController(alert, animated: true, completion: nil)
+        if groupDefaults.string(forKey: "userToken") == nil {
+            let alert = UIAlertController(title: "Please Log In", message: "Sharing requires you to be logged in. Open Simplepin, log in and try again.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: { _ in self.cancel() }))
+            self.present(alert, animated: true, completion: nil)
         }
 
-        var openExtensionCount = groupDefaults.objectForKey("openShareExtension") as? [Int] ?? [Int]()
+        var openExtensionCount = groupDefaults.object(forKey: "openShareExtension") as? [Int] ?? [Int]()
         openExtensionCount.append(1)
-        groupDefaults.setObject(openExtensionCount, forKey: "openShareExtension")
+        groupDefaults.set(openExtensionCount, forKey: "openShareExtension")
     }
 
-    override func viewDidDisappear(animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         addBookmarkTask?.cancel()
     }
@@ -56,43 +56,43 @@ class ShareViewController: SLComposeServiceViewController, OptionsTableViewDeleg
         if contentText.isEmpty {
             return false
         }
-        if groupDefaults.stringForKey("userToken") == nil {
+        if groupDefaults.string(forKey: "userToken") == nil {
             return false
         }
         return true
     }
 
     override func didSelectPost() {
-        self.addBookmarkTask = self.addBookmark(self.bookmark.url, title: self.contentText, shared: self.bookmark.personal, description: self.bookmark.description, tags: self.bookmark.tags, toread: self.bookmark.toread) { resultCode in
+        self.addBookmarkTask = self.addBookmark(url: self.bookmark.url, title: self.contentText, shared: self.bookmark.personal, description: self.bookmark.description, tags: self.bookmark.tags, toread: self.bookmark.toread) { resultCode in
 
             if resultCode != "done" {
-                let alert = UIAlertController(title: "Something Went Wrong", message: resultCode, preferredStyle: UIAlertControllerStyle.Alert)
-                alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Cancel, handler: nil))
-                self.presentViewController(alert, animated: true, completion: nil)
+                let alert = UIAlertController(title: "Something Went Wrong", message: resultCode, preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+                self.present(alert, animated: true, completion: nil)
                 return
             }
 
-            var postToPinboardCount = self.groupDefaults.objectForKey("postToPinboard") as? [Int] ?? [Int]()
+            var postToPinboardCount = self.groupDefaults.object(forKey: "postToPinboard") as? [Int] ?? [Int]()
             postToPinboardCount.append(1)
-            self.groupDefaults.setObject(postToPinboardCount, forKey: "postToPinboard")
+            self.groupDefaults.set(postToPinboardCount, forKey: "postToPinboard")
 
-            self.extensionContext?.completeRequestReturningItems([], completionHandler:nil)
+            self.extensionContext?.completeRequest(returningItems: [], completionHandler:nil)
         }
     }
-
-    override func configurationItems() -> [AnyObject]! {
-        return [optionsConfigurationItem]
+    
+    override func configurationItems() -> [Any]! {
+        [optionsConfigurationItem]
     }
 
     lazy var optionsConfigurationItem: SLComposeSheetConfigurationItem = {
         let item = SLComposeSheetConfigurationItem()
-        item.title = "Options"
-        item.tapHandler = self.showOptions
-        return item
+        item!.title = "Options"
+        item!.tapHandler = self.showOptions
+        return item!
     }()
 
     func showOptions() {
-        let vc = OptionsTableViewController(style: .Plain)
+        let vc = OptionsTableViewController(style: .plain)
         vc.passedBookmark = bookmark
         vc.delegate = self
         self.pushConfigurationViewController(vc)
@@ -100,9 +100,9 @@ class ShareViewController: SLComposeServiceViewController, OptionsTableViewDeleg
 
     func getUrl() {
         if let item = extensionContext?.inputItems.first as? NSExtensionItem {
-            if let itemProvider = item.attachments?.first as? NSItemProvider {
+            if let itemProvider = item.attachments?.first {
                 if itemProvider.hasItemConformingToTypeIdentifier("public.url") {
-                    itemProvider.loadItemForTypeIdentifier("public.url", options: nil, completionHandler: { (url, error) -> Void in
+                    itemProvider.loadItem(forTypeIdentifier: "public.url", options: nil, completionHandler: { (url, error) -> Void in
                         if let shareURL = url as? NSURL {
                             self.bookmark.url = shareURL
                         }
@@ -117,49 +117,49 @@ class ShareViewController: SLComposeServiceViewController, OptionsTableViewDeleg
         self.popConfigurationViewController()
     }
 
-    func addBookmark(url: NSURL, title: String, shared: Bool, description: String = "", tags: [String] = [], toread: Bool = false, completion: (String?) -> Void) -> NSURLSessionTask? {
-        let userToken = groupDefaults.stringForKey("userToken")! as String
+    func addBookmark(url: NSURL, title: String, shared: Bool, description: String = "", tags: [String] = [], toread: Bool = false, completion: @escaping (String?) -> Void) -> URLSessionTask? {
+        let userToken = groupDefaults.string(forKey: "userToken")! as String
         let urlString = url.absoluteString
-        let tagsString = tags.joinWithSeparator(" ")
+        let tagsString = tags.joined(separator: " ")
         let shared = !shared
 
-        let urlQuery = NSURLComponents()
+        var urlQuery = URLComponents()
         urlQuery.scheme = "https"
         urlQuery.host = "api.pinboard.in"
         urlQuery.path = "/v1/posts/add"
         urlQuery.queryItems = [
-            NSURLQueryItem(name: "url", value: urlString),
-            NSURLQueryItem(name: "description", value: title),
-            NSURLQueryItem(name: "extended", value: description),
-            NSURLQueryItem(name: "tags", value: tagsString),
-            NSURLQueryItem(name: "shared", value: shared.boolToString),
-            NSURLQueryItem(name: "toread", value: toread.boolToString),
-            NSURLQueryItem(name: "auth_token", value: userToken),
-            NSURLQueryItem(name: "format", value: "json"),
+            URLQueryItem(name: "url", value: urlString),
+            URLQueryItem(name: "description", value: title),
+            URLQueryItem(name: "extended", value: description),
+            URLQueryItem(name: "tags", value: tagsString),
+            URLQueryItem(name: "shared", value: shared.boolToString),
+            URLQueryItem(name: "toread", value: toread.boolToString),
+            URLQueryItem(name: "auth_token", value: userToken),
+            URLQueryItem(name: "format", value: "json"),
         ]
 
-        guard let url = urlQuery.URL else {
+        guard let url = urlQuery.url else {
             completion(nil)
             return nil
         }
 
-        let task = NSURLSession.sharedSession().dataTaskWithURL(url) { (data, httpResponse, error) -> Void in
-            dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                guard let data = data where error == nil else {
+        let task = URLSession.shared.dataTask(with: url) { (data, httpResponse, error) -> Void in
+            DispatchQueue.main.async {
+                guard let data = data, error == nil else {
                     completion(nil)
                     return
                 }
-                let resultCode = self.parseJSON(data, key: "result_code")
+                let resultCode = self.parseJSON(data: data, key: "result_code")
                 completion(resultCode)
-            })
+            }
         }
 
         task.resume()
         return task
     }
 
-    func parseJSON(data: NSData, key: String) -> String? {
-        if let jsonObject = (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as? [String: AnyObject] {
+    func parseJSON(data: Data, key: String) -> String? {
+        if let jsonObject = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: AnyObject] {
             return jsonObject["\(key)"] as? String
         }
         return nil

@@ -9,10 +9,10 @@
 import Foundation
 
 class BookmarkItem {
-    let url: NSURL
+    let url: URL
     let title: String
     let description: String
-    let date: NSDate
+    let date: Date
     let tags: [String]
     var personal: Bool
     var toread: Bool
@@ -24,11 +24,11 @@ class BookmarkItem {
         let personalString = json["shared"] as? String
         let toreadString = json["toread"] as? String
 
-        guard let url = NSURL(string: linkString!),
+        guard let url = URL(string: linkString!),
             let title = json["description"] as? String,
             let description = json["extended"] as? String,
             let date = dateString?.stringToDate,
-            let tags = tagsString?.componentsSeparatedByString(" ").filter({ !$0.isEmpty }),
+            let tags = tagsString?.components(separatedBy: " ").filter({ !$0.isEmpty }),
             let personal = personalString?.stringToBool,
             let toread = toreadString?.stringToBool else {
                 return nil

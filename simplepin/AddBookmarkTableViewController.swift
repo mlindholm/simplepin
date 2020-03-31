@@ -11,10 +11,10 @@ import Fabric
 import Crashlytics
 
 class AddBookmarkTableViewController: UITableViewController, UITextViewDelegate, UITextFieldDelegate {
-    let defaults = NSUserDefaults(suiteName: "group.ml.simplepin")!
-    var addBookmarkTask: NSURLSessionTask?
-    var passedUrl: NSURL?
-    var bookmarkDate: NSDate?
+    let defaults = UserDefaults(suiteName: "group.ml.simplepin")!
+    var addBookmarkTask: URLSessionTask?
+    var passedUrl: URL?
+    var bookmarkDate: Date?
     var bookmark: BookmarkItem?
     var tagsArray: [TagItem]?
 
@@ -32,11 +32,11 @@ class AddBookmarkTableViewController: UITableViewController, UITextViewDelegate,
         super.viewDidLoad()
 
         descriptionTextView.delegate = self
-        urlTextField.addTarget(self, action: #selector(self.textFieldDidChange(_:)), forControlEvents: UIControlEvents.EditingChanged)
-        titleTextField.addTarget(self, action: #selector(self.textFieldDidChange(_:)), forControlEvents: UIControlEvents.EditingChanged)
+        urlTextField.addTarget(self, action: #selector(textFieldDidChange(textField:)), for: UIControl.Event.editingChanged)
+        titleTextField.addTarget(self, action: #selector(textFieldDidChange(textField:)), for: UIControl.Event.editingChanged)
 
-        privateSwitch.on = defaults.boolForKey("privateByDefault")
-        toreadSwitch.on = defaults.boolForKey("toreadByDefault")
+        privateSwitch.isOn = defaults.bool(forKey: "privateByDefault")
+        toreadSwitch.isOn = defaults.bool(forKey: "toreadByDefault")
 
         if let bookmark = bookmark {
             navigationItem.title = "Edit Bookmark"
@@ -44,10 +44,10 @@ class AddBookmarkTableViewController: UITableViewController, UITextViewDelegate,
             urlTextField.text = bookmark.url.absoluteString
             titleTextField.text = bookmark.title
             descriptionTextView.text = bookmark.description
-            tagsTextField.text = bookmark.tags.joinWithSeparator(" ")
+            tagsTextField.text = bookmark.tags.joined(separator: " ")
             bookmarkDate = bookmark.date
-            privateSwitch.on = bookmark.personal
-            toreadSwitch.on = bookmark.toread
+            privateSwitch.isOn = bookmark.personal
+            toreadSwitch.isOn = bookmark.toread
         } else {
             bookmarkDate = nil
         }
@@ -59,22 +59,22 @@ class AddBookmarkTableViewController: UITableViewController, UITextViewDelegate,
         checkValidBookmark()
 
         if !descriptionTextView.text.isEmpty {
-            descriptionTextView.backgroundColor = UIColor.whiteColor()
+            descriptionTextView.backgroundColor = UIColor.white
         }
 
-        Answers.logContentViewWithName("Add/edit bookmark view", contentType: "View", contentId: "addedit-1", customAttributes: [:])
+        Answers.logContentView(withName: "Add/edit bookmark view", contentType: "View", contentId: "addedit-1", customAttributes: [:])
     }
 
-    override func viewDidDisappear(animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         addBookmarkTask?.cancel()
     }
-
-    override func tableView(tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+    
+    override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
         if section == 0 {
             guard let tags = tagsArray else { return nil }
             let popular = tags.filter{ $0.count > 1 }.map{ $0.tag }
-            let title = "Top tags: " + popular.joinWithSeparator(", ")
+            let title = "Top tags: " + popular.joined(separator: ", ")
             return title
         } else {
             return nil
@@ -82,26 +82,24 @@ class AddBookmarkTableViewController: UITableViewController, UITextViewDelegate,
     }
 
     //MARK: - Actions
-
-    @IBAction func addButtonPressed(sender: AnyObject) {
-
+    @IBAction func addButtonTapped(_ sender: Any) {
         guard let urlText = urlTextField.text,
-            let url = NSURL(string: urlText),
+            let url = URL(string: urlText),
             let title = titleTextField.text,
             let description = descriptionTextView.text,
-            let tags = tagsTextField.text?.componentsSeparatedByString(" ") else {
+            let tags = tagsTextField.text?.components(separatedBy: " ") else {
                 return
         }
 
         if Reachability.isConnectedToNetwork() == false {
-            alertError("Couldn't Add Bookmark", message: "Try again when you're back online.")
+            alertError(title: "Couldn't Add Bookmark", message: "Try again when you're back online.")
         } else {
-            self.addBookmarkTask = Network.addBookmark(url, title: title, shared: privateSwitch.on, description: description, tags: tags, dt: bookmarkDate, toread: toreadSwitch.on) { resultCode in
+            self.addBookmarkTask = Network.addBookmark(url: url, title: title, shared: privateSwitch.isOn, description: description, tags: tags, dt: bookmarkDate, toread: toreadSwitch.isOn) { resultCode in
                 if resultCode == "done" {
-                    NSNotificationCenter.defaultCenter().postNotificationName("bookmarkAdded", object: nil)
-                    self.performSegueWithIdentifier("closeAddBookmarkModal", sender: self)
+                    NotificationCenter.default.post(name: NSNotification.Name(rawValue: "bookmarkAdded"), object: nil)
+                    self.dismiss(animated: true, completion: nil)
                 } else {
-                    self.alertErrorWithReachability("Something Went Wrong", message: resultCode)
+                    self.alertErrorWithReachability(title: "Something Went Wrong", message: resultCode)
                 }
             }
         }
@@ -113,21 +111,25 @@ class AddBookmarkTableViewController: UITableViewController, UITextViewDelegate,
         let url = urlTextField.text ?? ""
         let title = titleTextField.text ?? ""
         if !url.isEmpty && !title.isEmpty {
-            addButton.enabled = true
+            addButton.isEnabled = true
         } else {
-            addButton.enabled = false
+            addButton.isEnabled = false
         }
     }
 
-    func textFieldDidChange(textField: UITextField) {
+    @objc private func textFieldDidChange(textField: UITextField) {
         checkValidBookmark()
     }
 
-    func textViewDidChange(textView: UITextView) {
+    func textViewDidChange(_ textView: UITextView) {
         if descriptionTextView.text.isEmpty {
             descriptionTextView.backgroundColor = nil
         } else {
-            descriptionTextView.backgroundColor = UIColor.whiteColor()
+            descriptionTextView.backgroundColor = .white
         }
+    }
+    
+    @IBAction func dismissAddBookmark(_ sender: Any) {
+        dismiss(animated: true, completion: nil)
     }
 }

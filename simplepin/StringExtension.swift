@@ -9,22 +9,22 @@
 import Foundation
 
 extension String {
-    var stringToDate: NSDate? {
-        let formatter = NSDateFormatter()
+    var stringToDate: Date? {
+        let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
-        return formatter.dateFromString(self)
+        return formatter.date(from: self)
     }
 
     var sentencecaseString: String {
         if isEmpty { return "" }
-        let lowercaseString = self.lowercaseString
-        return lowercaseString.stringByReplacingCharactersInRange(lowercaseString.startIndex...lowercaseString.startIndex, withString: String(lowercaseString[lowercaseString.startIndex]).uppercaseString)
+        let lowercaseString = self.lowercased()
+        return lowercaseString.replacingCharacters(in: lowercaseString.startIndex...lowercaseString.startIndex, with: String(lowercaseString[lowercaseString.startIndex]).uppercased())
     }
 
     var removeExcessiveSpaces: String {
-        let components = self.componentsSeparatedByCharactersInSet(NSCharacterSet.whitespaceCharacterSet())
+        let components = self.components(separatedBy: CharacterSet.whitespaces)
         let filtered = components.filter({!$0.isEmpty})
-        return filtered.joinWithSeparator(" ")
+        return filtered.joined(separator: " ")
     }
 
     var stringToBool: Bool {

@@ -14,6 +14,7 @@
 		4ABD20AF1D2AE99D000190DE /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4ABD20AD1D2AE99D000190DE /* MainInterface.storyboard */; };
 		4ABD20B31D2AE99D000190DE /* Add Bookmark.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4ABD20A91D2AE99D000190DE /* Add Bookmark.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4ACF3E141CFF5B620006A587 /* TagCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACF3E131CFF5B620006A587 /* TagCollectionViewCell.swift */; };
+		8C4A5D67241FAA8400CDF027 /* Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C4A5D66241FAA8400CDF027 /* Helpers.swift */; };
 		CC1E531B1CB80A20002532FB /* UIViewControllerExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC1E531A1CB80A20002532FB /* UIViewControllerExtension.swift */; };
 		CC1E53201CB99102002532FB /* AddBookmarkTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC1E531F1CB99102002532FB /* AddBookmarkTableViewController.swift */; };
 		CC3219281CB2FAE600284118 /* NSDateExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3219271CB2FAE600284118 /* NSDateExtension.swift */; };
@@ -70,6 +71,7 @@
 		4ABD20B01D2AE99D000190DE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4ABD20B81D2AF037000190DE /* Add Bookmark.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Add Bookmark.entitlements"; sourceTree = "<group>"; };
 		4ACF3E131CFF5B620006A587 /* TagCollectionViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TagCollectionViewCell.swift; sourceTree = "<group>"; };
+		8C4A5D66241FAA8400CDF027 /* Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helpers.swift; sourceTree = "<group>"; };
 		CC1E531A1CB80A20002532FB /* UIViewControllerExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UIViewControllerExtension.swift; sourceTree = "<group>"; };
 		CC1E531F1CB99102002532FB /* AddBookmarkTableViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddBookmarkTableViewController.swift; sourceTree = "<group>"; };
 		CC3219271CB2FAE600284118 /* NSDateExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NSDateExtension.swift; sourceTree = "<group>"; };
@@ -198,6 +200,7 @@
 				CC3C02CF1D2FB1C50067B236 /* MigrateDefaults.swift */,
 				CCD6243E1CAA5731007621FC /* Network.swift */,
 				4AA5D4501D369A4100FC4735 /* Global.swift */,
+				8C4A5D66241FAA8400CDF027 /* Helpers.swift */,
 				CC3C02BA1D2BC37D0067B236 /* simplepin.entitlements */,
 				CCAC5E641C84A8A1006BA336 /* Info.plist */,
 			);
@@ -252,7 +255,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0730;
-				LastUpgradeCheck = 0820;
+				LastUpgradeCheck = 1130;
 				ORGANIZATIONNAME = "Mathias Lindholm";
 				TargetAttributes = {
 					4ABD20A81D2AE99D000190DE = {
@@ -277,9 +280,9 @@
 					};
 				};
 			};
-			buildConfigurationList = CCAC5E501C84A8A1006BA336 /* Build configuration list for PBXProject "Simplepin" */;
+			buildConfigurationList = CCAC5E501C84A8A1006BA336 /* Build configuration list for PBXProject "simplepin" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -360,6 +363,7 @@
 				CCAC5EF91C84EC75006BA336 /* BookmarksTableViewController.swift in Sources */,
 				4AA5D4511D369A4100FC4735 /* Global.swift in Sources */,
 				CC3C02D01D2FB1C50067B236 /* MigrateDefaults.swift in Sources */,
+				8C4A5D67241FAA8400CDF027 /* Helpers.swift in Sources */,
 				CC32192B1CB3032F00284118 /* StringExtension.swift in Sources */,
 				CCAC5E591C84A8A1006BA336 /* AppDelegate.swift in Sources */,
 				CCAC5EFB1C84ED06006BA336 /* BookmarkTableViewCell.swift in Sources */,
@@ -424,7 +428,7 @@
 				PROVISIONING_PROFILE = "";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 2.3;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -443,7 +447,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "ml.simplepin.Add-Bookmark";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 2.3;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -455,14 +459,22 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -490,6 +502,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -502,14 +515,22 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -530,6 +551,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -552,12 +574,13 @@
 					"$(PROJECT_DIR)",
 				);
 				INFOPLIST_FILE = simplepin/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = ml.simplepin;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "simplepin/simplepin-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 2.3;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -577,11 +600,12 @@
 					"$(PROJECT_DIR)",
 				);
 				INFOPLIST_FILE = simplepin/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = ml.simplepin;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "simplepin/simplepin-Bridging-Header.h";
-				SWIFT_VERSION = 2.3;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -597,7 +621,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CCAC5E501C84A8A1006BA336 /* Build configuration list for PBXProject "Simplepin" */ = {
+		CCAC5E501C84A8A1006BA336 /* Build configuration list for PBXProject "simplepin" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CCAC5E651C84A8A1006BA336 /* Debug */,

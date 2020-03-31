@@ -12,24 +12,25 @@ import Crashlytics
 import SafariServices
 
 class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
-    let appDelegate = UIApplication.sharedApplication().delegate as? AppDelegate
-    let activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .Gray)
-    let defaults = NSUserDefaults(suiteName: "group.ml.simplepin")!
+    
+    let appDelegate = UIApplication.shared.delegate as? AppDelegate
+    let activityIndicator = UIActivityIndicatorView(style: .gray)
+    let defaults = UserDefaults(suiteName: "group.ml.simplepin")!
     let searchController = UISearchController(searchResultsController: nil)
-    let notifications = NSNotificationCenter.defaultCenter()
+    let notifications = NotificationCenter.default
     var bookmarksArray = [BookmarkItem]()
     var filteredBookmarks = [BookmarkItem]()
     var tagsArray = [TagItem]()
-    var fetchAllPostsTask: NSURLSessionTask?
-    var checkForUpdatesTask: NSURLSessionTask?
-    var deleteBookmarkTask: NSURLSessionTask?
-    var addBookmarkTask: NSURLSessionTask?
-    var fetchTagsTask: NSURLSessionTask?
-    var bookmarkToPass = BookmarkItem?()
-    var urlToPass: NSURL?
-    var dontAddThisUrl: NSURL?
-    var searchIsActive: Bool {return searchController.active && searchController.searchBar.text != ""}
-    var searchTimer: NSTimer?
+    var fetchAllPostsTask: URLSessionTask?
+    var checkForUpdatesTask: URLSessionTask?
+    var deleteBookmarkTask: URLSessionTask?
+    var addBookmarkTask: URLSessionTask?
+    var fetchTagsTask: URLSessionTask?
+    var bookmarkToPass: BookmarkItem?
+    var urlToPass: URL?
+    var dontAddThisUrl: URL?
+    var searchIsActive: Bool {return searchController.isActive && searchController.searchBar.text != ""}
+    var searchTimer: Timer?
 
     @IBOutlet var emptyState: UIView!
     @IBOutlet var emptyStateSpinner: UIActivityIndicatorView!
@@ -40,13 +41,13 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        notifications.addObserverForName("loginSuccessful", object: nil, queue: nil, usingBlock: successfullAddOrLogin)
-        notifications.addObserverForName("bookmarkAdded", object: nil, queue: nil, usingBlock: successfullAddOrLogin)
-        notifications.addObserverForName("handleRequestError", object: nil, queue: nil, usingBlock: handleRequestError)
-        notifications.addObserverForName("tokenChanged", object: nil, queue: nil, usingBlock: tokenChanged)
-        notifications.addObserver(self, selector: #selector(self.didBecomeActive), name: UIApplicationDidBecomeActiveNotification, object: nil)
+        notifications.addObserver(forName: Notification.Name(rawValue: "loginSuccessful"), object: nil, queue: nil, using: successfullAddOrLogin)
+        notifications.addObserver(forName: Notification.Name(rawValue: "bookmarkAdded"), object: nil, queue: nil, using: successfullAddOrLogin)
+        notifications.addObserver(forName: Notification.Name(rawValue: "handleRequestError"), object: nil, queue: nil, using: handleRequestError)
+        notifications.addObserver(forName: Notification.Name(rawValue: "tokenChanged"), object: nil, queue: nil, using: tokenChanged)
+        notifications.addObserver(self, selector: #selector(self.didBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
 
-        if defaults.stringForKey("userToken") != nil {
+        if defaults.string(forKey: "userToken") != nil {
             startFetchAllPosts()
         }
 
@@ -54,17 +55,17 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
 
         configureSearchController()
 
-        self.refreshControl?.tintColor = UIColor.lightGrayColor()
-        self.refreshControl?.addTarget(self, action: #selector(self.handleRefresh(_:)), forControlEvents: UIControlEvents.ValueChanged)
+        self.refreshControl?.tintColor = UIColor.lightGray
+        self.refreshControl?.addTarget(self, action: #selector(handleRefresh(_:)), for: UIControl.Event.valueChanged)
 
-        let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPress(_:)))
+        let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPress(longPressGestureRecognizer:)))
         self.view.addGestureRecognizer(longPressRecognizer)
 
         tableView.estimatedRowHeight = 128.0
-        tableView.rowHeight = UITableViewAutomaticDimension
+        tableView.rowHeight = UITableView.automaticDimension
     }
 
-    override func viewDidDisappear(animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         checkForUpdatesTask?.cancel()
         deleteBookmarkTask?.cancel()
@@ -72,18 +73,18 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
     }
 
     func sendExtensionAnalyticsToFabric() {
-        if let openShareExtension = defaults.objectForKey("openShareExtension") as? [Int] {
+        if let openShareExtension = defaults.object(forKey: "openShareExtension") as? [Int] {
             for _ in openShareExtension {
-                Answers.logContentViewWithName("Open Share Extension", contentType: "Extension", contentId: "extension-1", customAttributes: [:])
+                Answers.logContentView(withName: "Open Share Extension", contentType: "Extension", contentId: "extension-1", customAttributes: [:])
             }
-            defaults.removeObjectForKey("openShareExtension")
+            defaults.removeObject(forKey: "openShareExtension")
         }
 
-        if let postToPinboard = defaults.objectForKey("postToPinboard") as? [Int] {
+        if let postToPinboard = defaults.object(forKey: "postToPinboard") as? [Int] {
             for _ in postToPinboard {
-                Answers.logContentViewWithName("Post to Pinboard", contentType: "Extension", contentId: "extension-2", customAttributes: [:])
+                Answers.logContentView(withName: "Post to Pinboard", contentType: "Extension", contentId: "extension-2", customAttributes: [:])
             }
-            defaults.removeObjectForKey("postToPinboard")
+            defaults.removeObject(forKey: "postToPinboard")
         }
     }
 
@@ -91,39 +92,42 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
         searchController.searchBar.delegate = self
         searchController.searchResultsUpdater = self
         searchController.dimsBackgroundDuringPresentation = false
-        searchController.searchBar.autocapitalizationType = .None
-        searchController.searchBar.spellCheckingType = .No
-        searchController.searchBar.searchBarStyle = .Default
-        searchController.searchBar.barTintColor = .whiteColor()
-        searchController.searchBar.translucent = false
-        searchController.searchBar.layer.borderColor = UIColor.whiteColor().CGColor
+        searchController.searchBar.autocapitalizationType = .none
+        searchController.searchBar.spellCheckingType = .no
+        searchController.searchBar.searchBarStyle = .default
+        searchController.searchBar.barTintColor = .white
+        searchController.searchBar.isTranslucent = false
+        searchController.searchBar.layer.borderColor = UIColor.white.cgColor
         searchController.searchBar.layer.borderWidth = 1
-        searchController.searchBar.setSearchFieldBackgroundImage(UIImage(named: "bg_searchfield"), forState: .Normal)
+        searchController.searchBar.setSearchFieldBackgroundImage(UIImage(named: "bg_searchfield"), for: .normal)
         searchController.searchBar.searchTextPositionAdjustment = UIOffset.init(horizontal: 7.0, vertical: 0.0)
         definesPresentationContext = true
         tableView.tableHeaderView = searchController.searchBar
     }
 
     func checkPasteboard() {
-        if defaults.boolForKey("addClipboard") == true {
-            if let pasteboardUrl = UIPasteboard.generalPasteboard().URL {
-                if !bookmarksArray.contains( { $0.url == pasteboardUrl }) && self.dontAddThisUrl != pasteboardUrl {
-                    let alert = UIAlertController(title: "Add Link to Pinboard?", message: "\(pasteboardUrl)", preferredStyle: UIAlertControllerStyle.Alert)
-                    alert.addAction(UIAlertAction(title: "Cancel", style: .Cancel, handler: { action in
-                        self.dontAddThisUrl = pasteboardUrl
+        if defaults.bool(forKey: "addClipboard") == true {
+            if let pasteboardUrl = UIPasteboard.general.url {
+                let filteredBookmarks = bookmarksArray.filter({ (item: BookmarkItem) -> Bool in
+                    item.url == pasteboardUrl
+                })
+                if filteredBookmarks.count == 0 && self.dontAddThisUrl != pasteboardUrl {
+                    let alert = UIAlertController(title: "Add Link to Pinboard?", message: "\(pasteboardUrl)", preferredStyle: UIAlertController.Style.alert)
+                    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { action in
+                        self.dontAddThisUrl = pasteboardUrl as URL
                     }))
-                    alert.addAction(UIAlertAction(title: "Add", style: .Default, handler: { action in
-                        self.urlToPass = pasteboardUrl
-                        self.performSegueWithIdentifier("openEditBookmarkModal", sender: self)
+                    alert.addAction(UIAlertAction(title: "Add", style: .default, handler: { action in
+                        self.urlToPass = pasteboardUrl as URL
+                        self.performSegue(withIdentifier: "openEditBookmarkModal", sender: self)
                     }))
-                    self.presentViewController(alert, animated: true, completion: nil)
+                    self.present(alert, animated: true, completion: nil)
                 }
             }
         }
     }
 
     func showEmptyState(message: String, spinner: Bool) {
-        emptyState.hidden = false
+        emptyState.isHidden = false
         emptyStateLabel.text = message
 
         if spinner == true {
@@ -134,35 +138,35 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
     }
 
     func hideEmptyState() {
-        emptyState.hidden = true
+        emptyState.isHidden = true
         emptyStateSpinner.stopAnimating()
     }
 
     // MARK: - Events
 
-    func didBecomeActive() {
-        if defaults.stringForKey("userToken") != nil {
+    @objc func didBecomeActive() {
+        if defaults.string(forKey: "userToken") != nil {
             checkPasteboard()
             startCheckForUpdates()
         }
     }
 
-    func successfullAddOrLogin(notification: NSNotification) {
+    func successfullAddOrLogin(notification: Notification) {
         startFetchAllPosts()
     }
 
-    func handleRequestError(notification: NSNotification) {
+    func handleRequestError(notification: Notification) {
         if let info = notification.userInfo as? Dictionary<String, String> {
             guard let title = info["title"],
                 let message = info["message"] else {
                     return
             }
-            alertError(title, message: message)
+            alertError(title: title, message: message)
         }
     }
 
-    func tokenChanged(notification: NSNotification) {
-        dismissViewControllerAnimated(true, completion: nil)
+    func tokenChanged(notification: Notification) {
+        dismiss(animated: true, completion: nil)
         appDelegate?.logOut()
     }
 
@@ -170,20 +174,20 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
 
     func startFetchAllPosts() {
         if Reachability.isConnectedToNetwork() == false {
-            showEmptyState("No internet connection.", spinner: false)
+            showEmptyState(message: "No internet connection.", spinner: false)
         } else {
-            showEmptyState("Loading bookmarks…", spinner: true)
+            showEmptyState(message: "Loading bookmarks…", spinner: true)
             fetchAllPostsTask = Network.fetchAllPosts() { [weak self] bookmarks in
                 self?.bookmarksArray = bookmarks
-                if self?.bookmarksArray.count > 0 {
+                if bookmarks.count > 0 {
                     self?.hideEmptyState()
                 } else {
-                    self?.showEmptyState("No bookmarks.", spinner: false)
+                    self?.showEmptyState(message: "No bookmarks.", spinner: false)
                 }
-                self?.defaults.setObject(NSDate(), forKey: "lastUpdateDate")
+                self?.defaults.set(Date(), forKey: "lastUpdateDate")
                 self?.tableView.reloadData()
                 self?.checkPasteboard()
-                self?.filterContentForSearchText(self?.searchController.searchBar.text ?? "")
+                self?.filterContentForSearchText(searchText: self?.searchController.searchBar.text ?? "")
             }
             fetchTagsTask = Network.fetchTags() { [weak self] tags in
                 self?.tagsArray = tags
@@ -193,10 +197,12 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
 
     func startCheckForUpdates() {
         if Reachability.isConnectedToNetwork() == false {
-            alertError("Couldn't Refresh Bookmarks", message: "Try again when you're back online.")
+            alertError(title: "Couldn't Refresh Bookmarks", message: "Try again when you're back online.")
         } else {
             checkForUpdatesTask = Network.checkForUpdates() { updateDate in
-                let lastUpdateDate = self.defaults.objectForKey("lastUpdateDate") as? NSDate
+                guard let lastUpdateDate = self.defaults.object(forKey: "lastUpdateDate") as? Date, let updateDate = updateDate else {
+                    return
+                }
                 if lastUpdateDate > updateDate && self.bookmarksArray.isEmpty {
                     self.startFetchAllPosts()
                 } else if lastUpdateDate < updateDate {
@@ -208,18 +214,20 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
         }
     }
 
-    func showBookmark(currentUrl: NSURL?) {
+    func showBookmark(currentUrl: URL?) {
         if let url = currentUrl {
-            if defaults.boolForKey("openInSafari") == true {
-                UIApplication.sharedApplication().openURL(url)
+            if defaults.bool(forKey: "openInSafari") == true {
+                Helpers.open(scheme: url.absoluteString)
             } else {
-                let vc = SFSafariViewController(URL: url, entersReaderIfAvailable: true)
-                presentViewController(vc, animated: true, completion: nil)
+                let config = SFSafariViewController.Configuration()
+                config.entersReaderIfAvailable = true
+                let vc = SFSafariViewController(url: url as URL, configuration: config)
+                present(vc, animated: true, completion: nil)
             }
         }
     }
 
-    func handleRefresh(refreshControl: UIRefreshControl) {
+    @objc func handleRefresh(_ refreshControl: UIRefreshControl) {
         startCheckForUpdates()
         refreshControl.endRefreshing()
     }
@@ -227,14 +235,14 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
     // MARK: - Search
 
     func filterContentForSearchText(searchText: String, scope: String = "All") {
-        let searchTextArray = searchText.lowercaseString.componentsSeparatedByString(" ")
+        let searchTextArray = searchText.lowercased().components(separatedBy: " ")
         var searchResults: [Set<BookmarkItem>] = []
 
         for item in searchTextArray where !item.isEmpty {
             let searchResult = bookmarksArray.filter { bookmark in
-                let title = bookmark.title.lowercaseString.containsString(item)
-                let description = bookmark.description.lowercaseString.containsString(item)
-                let tags = bookmark.tags.joinWithSeparator(" ").lowercaseString.containsString(item)
+                let title = bookmark.title.lowercased().contains(item)
+                let description = bookmark.description.lowercased().contains(item)
+                let tags = bookmark.tags.joined(separator: " ").lowercased().contains(item)
                 if scope == "Tag" {
                     return tags
                 }
@@ -246,16 +254,16 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
         if let first = searchResults.first {
             var result = first
             for item in searchResults[1..<searchResults.count] {
-                result = result.intersect(item)
+                result = result.intersection(item)
             }
-            let sortedResult = result.sort({ $0.date > $1.date })
+            let sortedResult = result.sorted(by: { $0.date > $1.date })
             filteredBookmarks = Array(sortedResult)
         } else {
             filteredBookmarks = []
         }
 
         if !searchText.isEmpty && filteredBookmarks.isEmpty {
-            showEmptyState("Couldn't find \(searchText)", spinner: false)
+            showEmptyState(message: "Couldn't find \(searchText)", spinner: false)
         } else {
             hideEmptyState()
         }
@@ -263,22 +271,22 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
         tableView.reloadData()
     }
 
-    func searchBar(searchBar: UISearchBar, textDidChange searchText: String) {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         searchTimer?.invalidate()
-        searchTimer = NSTimer.scheduledTimerWithTimeInterval(2.0, target: self, selector: #selector(self.logSearchQuery), userInfo: searchText, repeats: false)
+        searchTimer = Timer.scheduledTimer(timeInterval: 2.0, target: self, selector: #selector(self.logSearchQuery), userInfo: searchText, repeats: false)
     }
 
-    func logSearchQuery() {
+    @objc func logSearchQuery() {
         if let search = searchTimer?.userInfo as? String {
-            if search.characters.count > 2 {
-                Answers.logSearchWithQuery(search, customAttributes: nil)
+            if search.count > 2 {
+                Answers.logSearch(withQuery: search, customAttributes: nil)
             }
         }
     }
 
     // MARK: - Table view
 
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if searchIsActive {
             return filteredBookmarks.count
         }
@@ -286,11 +294,11 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
     }
 
 
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("BookmarkCell", forIndexPath: indexPath) as! BookmarkTableViewCell
-        let formatter = NSDateFormatter()
-        formatter.dateStyle = .ShortStyle
-        formatter.timeStyle = .NoStyle
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "BookmarkCell", for: indexPath as IndexPath) as! BookmarkTableViewCell
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
 
         var bookmark: BookmarkItem
         if searchIsActive {
@@ -301,45 +309,45 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
 
         cell.titleLabel.text = bookmark.title
 
-        if defaults.boolForKey("relativeDate") == true {
+        if defaults.bool(forKey: "relativeDate") == true {
             cell.dateLabel.text = bookmark.date.timeAgo()
         } else {
-            cell.dateLabel.text = formatter.stringFromDate(bookmark.date)
+            cell.dateLabel.text = formatter.string(from: bookmark.date)
         }
 
         if bookmark.description.isEmpty {
-            cell.descriptionLabel.hidden = true
+            cell.descriptionLabel.isHidden = true
         } else {
-            cell.descriptionLabel.hidden = false
+            cell.descriptionLabel.isHidden = false
             cell.descriptionLabel.text = bookmark.description
         }
 
         if bookmark.tags.count == 0 {
             cell.collectionView.collectionViewLayout.invalidateLayout()
-            cell.collectionView.hidden = true
+            cell.collectionView.isHidden = true
         } else {
-            cell.collectionView.hidden = false
+            cell.collectionView.isHidden = false
         }
 
         if bookmark.toread == false {
-            cell.unreadIndicator.hidden = true
-            cell.titleLabel.font = UIFont.preferredFontForTextStyle(UIFontTextStyleBody)
+            cell.unreadIndicator.isHidden = true
+            cell.titleLabel.font = UIFont.preferredFont(forTextStyle: UIFont.TextStyle.body)
         } else {
-            cell.unreadIndicator.hidden = false
-            cell.titleLabel.font = UIFont.preferredFontForTextStyle(UIFontTextStyleHeadline)
+            cell.unreadIndicator.isHidden = false
+            cell.titleLabel.font = UIFont.preferredFont(forTextStyle: UIFont.TextStyle.headline)
         }
 
-        cell.privateIndicator.hidden = bookmark.personal == false
+        cell.privateIndicator.isHidden = bookmark.personal == false
 
         return cell
     }
-
-    override func tableView(tableView: UITableView, willDisplayCell cell: UITableViewCell, forRowAtIndexPath indexPath: NSIndexPath) {
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
         let cell = cell as! BookmarkTableViewCell
-        cell.setCollectionViewDataSourceDelegate(self, forRow: indexPath.row)
+        cell.setCollectionViewDataSourceDelegate(dataSourceDelegate: self, forRow: indexPath.row)
     }
-
-    override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         var bookmark: BookmarkItem
         if searchIsActive {
             bookmark = filteredBookmarks[indexPath.row]
@@ -347,32 +355,31 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
             bookmark = bookmarksArray[indexPath.row]
         }
 
-        if ((defaults.boolForKey("markAsRead") == true) && bookmark.toread == true) {
+        if ((defaults.bool(forKey: "markAsRead") == true) && bookmark.toread == true) {
             if Reachability.isConnectedToNetwork() == true {
-                self.addBookmarkTask = Network.addBookmark(bookmark.url, title: bookmark.title, shared: bookmark.personal, description: bookmark.description, tags: bookmark.tags, dt: bookmark.date, toread: false) { resultCode in
+                self.addBookmarkTask = Network.addBookmark(url: bookmark.url, title: bookmark.title, shared: bookmark.personal, description: bookmark.description, tags: bookmark.tags, dt: bookmark.date, toread: false) { resultCode in
                     if resultCode == "done" {
                         bookmark.toread = false
-                        self.tableView.reloadRowsAtIndexPaths([indexPath], withRowAnimation: .None)
+                        self.tableView.reloadRows(at: [indexPath], with: .none)
                     }
                 }
             }
         }
 
-        self.tableView.deselectRowAtIndexPath(indexPath, animated: true)
-        self.showBookmark(bookmark.url)
+        self.tableView.deselectRow(at: indexPath as IndexPath, animated: true)
+        self.showBookmark(currentUrl: bookmark.url as URL)
     }
 
     // MARK: - Collection View
 
-    func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         if searchIsActive {
             return filteredBookmarks[collectionView.tag].tags.count
         }
         return bookmarksArray[collectionView.tag].tags.count
     }
-
-    func collectionView(collectionView: UICollectionView,layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
-
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         var bookmark: BookmarkItem
         if searchIsActive {
             bookmark = filteredBookmarks[collectionView.tag]
@@ -381,14 +388,14 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
         }
 
         let tag = bookmark.tags[indexPath.row]
-        let size = tag.sizeWithAttributes([NSFontAttributeName: UIFont.preferredFontForTextStyle(UIFontTextStyleSubheadline)])
+        let size = tag.size(withAttributes: [NSAttributedString.Key.font: UIFont.preferredFont(forTextStyle: UIFont.TextStyle.subheadline)])
         let finalSize = CGSize(width: size.width + 12, height: 24)
 
         return finalSize
     }
-
-    func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCellWithReuseIdentifier("TagCell", forIndexPath: indexPath) as! TagCollectionViewCell
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TagCell", for: indexPath as IndexPath) as! TagCollectionViewCell
 
         var bookmark: BookmarkItem
         if searchIsActive {
@@ -401,30 +408,30 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
 
         return cell
     }
-
-    func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         var bookmark: BookmarkItem
         if searchIsActive {
             bookmark = filteredBookmarks[collectionView.tag]
         } else {
             bookmark = bookmarksArray[collectionView.tag]
         }
-        searchController.active = true
+        searchController.isActive = true
         searchController.searchBar.text = bookmark.tags[indexPath.row]
-        filterContentForSearchText(bookmark.tags[indexPath.row], scope: "Tag")
-        collectionView.deselectItemAtIndexPath(indexPath, animated: true)
+        filterContentForSearchText(searchText: bookmark.tags[indexPath.row], scope: "Tag")
+        collectionView.deselectItem(at: indexPath as IndexPath, animated: true)
     }
-
+    
     // MARK: - Navigation
-
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "openEditBookmarkModal" || segue.identifier == "openAddBookmarkModal" {
-            let navigationController = segue.destinationViewController as! UINavigationController
+            let navigationController = segue.destination as! UINavigationController
             if let vc = navigationController.topViewController as? AddBookmarkTableViewController {
                 if bookmarkToPass != nil {
                     vc.bookmark = bookmarkToPass
                 } else {
-                    vc.passedUrl = urlToPass
+                    vc.passedUrl = urlToPass as URL?
                 }
                 bookmarkToPass = nil
                 vc.tagsArray = self.tagsArray
@@ -432,26 +439,19 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
         }
 
         if segue.identifier == "openSettingsModal" {
-            let navigationController = segue.destinationViewController as! UINavigationController
+            let navigationController = segue.destination as! UINavigationController
             if let vc = navigationController.topViewController as? SettingsModalViewController {
                 vc.bookmarksArray = self.bookmarksArray
             }
         }
     }
-
-    @IBAction func unwindSettingsModal(segue: UIStoryboardSegue) {
-        self.tableView.reloadData()
-    }
-
-    @IBAction func unwindAddBookmarkModal(segue: UIStoryboardSegue) { }
-
     // MARK: - Editing
 
-    func longPress(longPressGestureRecognizer: UILongPressGestureRecognizer) {
-        if longPressGestureRecognizer.state == UIGestureRecognizerState.Began {
-            let touchPoint = longPressGestureRecognizer.locationInView(self.view)
+    @objc func longPress(longPressGestureRecognizer: UILongPressGestureRecognizer) {
+        if longPressGestureRecognizer.state == UIGestureRecognizer.State.began {
+            let touchPoint = longPressGestureRecognizer.location(in: self.view)
 
-            if let indexPath = tableView.indexPathForRowAtPoint(touchPoint) {
+            if let indexPath = tableView.indexPathForRow(at: touchPoint) {
                 var bookmark: BookmarkItem
                 if searchIsActive {
                     bookmark = filteredBookmarks[indexPath.row]
@@ -459,82 +459,89 @@ class BookmarksTableViewController: UITableViewController, UISearchBarDelegate, 
                     bookmark = bookmarksArray[indexPath.row]
                 }
 
-                let alertController = UIAlertController(title: bookmark.title, message: nil, preferredStyle: UIAlertControllerStyle.ActionSheet)
+                let alertController = UIAlertController(title: bookmark.title, message: nil, preferredStyle: UIAlertController.Style.actionSheet)
 
                 func actionReadUnread(toread: Bool) -> UIAlertAction {
                     let title = toread == true ? "Read" : "Unread"
-                    let action = UIAlertAction(title: "Mark as \(title)", style: UIAlertActionStyle.Default, handler: { action in
-                        self.addBookmarkTask = Network.addBookmark(bookmark.url, title: bookmark.title, shared: bookmark.personal, description: bookmark.description, tags: bookmark.tags, dt: bookmark.date, toread: !toread) { resultCode in
+                    let action = UIAlertAction(title: "Mark as \(title)", style: UIAlertAction.Style.default, handler: { action in
+                        self.addBookmarkTask = Network.addBookmark(url: bookmark.url, title: bookmark.title, shared: bookmark.personal, description: bookmark.description, tags: bookmark.tags, dt: bookmark.date, toread: !toread) { resultCode in
                             if resultCode == "done" {
                                 bookmark.toread = !toread
-                                self.tableView.reloadRowsAtIndexPaths([indexPath], withRowAnimation: .None)
+                                self.tableView.reloadRows(at: [indexPath], with: .none)
                             } else {
-                                self.alertErrorWithReachability("Something Went Wrong", message: resultCode)
+                                self.alertErrorWithReachability(title: "Something Went Wrong", message: resultCode)
                                 return
                             }
                         }
                     })
                     return action
                 }
-                let actionEdit = UIAlertAction(title: "Edit", style: UIAlertActionStyle.Default, handler: { action in
+                let actionEdit = UIAlertAction(title: "Edit", style: UIAlertAction.Style.default, handler: { action in
                     self.bookmarkToPass = bookmark
-                    self.performSegueWithIdentifier("openEditBookmarkModal", sender: self)
+                    self.performSegue(withIdentifier: "openEditBookmarkModal", sender: self)
                 })
-                let actionDelete = UIAlertAction(title: "Delete", style: UIAlertActionStyle.Destructive, handler: { action in
-                    self.deleteBookmarkTask = Network.deleteBookmark(bookmark.url) { resultCode in
+                let actionDelete = UIAlertAction(title: "Delete", style: UIAlertAction.Style.destructive, handler: { action in
+                    self.deleteBookmarkTask = Network.deleteBookmark(url: bookmark.url) { resultCode in
                         if resultCode == "done" {
-                            if self.searchController.active {
-                                self.filteredBookmarks.removeAtIndex(indexPath.row)
-                                self.bookmarksArray.removeAtIndex(indexPath.row)
+                            if self.searchController.isActive {
+                                self.filteredBookmarks.remove(at: indexPath.row)
+                                self.bookmarksArray.remove(at: indexPath.row)
                             } else {
-                                self.bookmarksArray.removeAtIndex(indexPath.row)
+                                self.bookmarksArray.remove(at: indexPath.row)
                             }
-                            self.defaults.setObject(self.bookmarksArray.count, forKey: "bookmarkCount")
-                            self.tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Left)
+                            self.defaults.set(self.bookmarksArray.count, forKey: "bookmarkCount")
+                            self.tableView.deleteRows(at: [indexPath], with: .left)
                             self.tableView.reloadData()
                         } else {
-                            self.alertErrorWithReachability("Something Went Wrong", message: resultCode)
+                            self.alertErrorWithReachability(title: "Something Went Wrong", message: resultCode)
                             return
                         }
                     }
                 })
-                let actionCancel = UIAlertAction(title: "Cancel", style: UIAlertActionStyle.Cancel, handler: nil)
+                let actionCancel = UIAlertAction(title: "Cancel", style: UIAlertAction.Style.cancel, handler: nil)
 
-                alertController.addAction(actionReadUnread(bookmark.toread))
+                alertController.addAction(actionReadUnread(toread: bookmark.toread))
                 alertController.addAction(actionEdit)
                 alertController.addAction(actionDelete)
                 alertController.addAction(actionCancel)
 
                 if let popoverController = alertController.popoverPresentationController {
-                    popoverController.sourceView = tableView.cellForRowAtIndexPath(indexPath)
-                    popoverController.sourceRect = tableView.cellForRowAtIndexPath(indexPath)!.bounds
+                    popoverController.sourceView = tableView.cellForRow(at: indexPath)
+                    popoverController.sourceRect = tableView.cellForRow(at: indexPath)!.bounds
                 }
                 
-                self.presentViewController(alertController, animated: true, completion: nil)
+                self.present(alertController, animated: true, completion: nil)
             }
         }
     }
 
     deinit {
-        notifications.removeObserver(self, name: "loginSuccessful", object: nil)
-        notifications.removeObserver(self, name: "bookmarkAdded", object: nil)
-        notifications.removeObserver(self, name: "handleRequestError", object: nil)
-        notifications.removeObserver(self, name: "tokenChanged", object: nil)
-        notifications.removeObserver(self, name: UIApplicationDidBecomeActiveNotification, object: nil)
+        notifications.removeObserver(self, name: Notification.Name(rawValue: "loginSuccessful"), object: nil)
+        notifications.removeObserver(self, name: Notification.Name(rawValue: "bookmarkAdded"), object: nil)
+        notifications.removeObserver(self, name: Notification.Name(rawValue: "handleRequestError"), object: nil)
+        notifications.removeObserver(self, name: Notification.Name(rawValue: "tokenChanged"), object: nil)
+        notifications.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
     }
 }
 
 // MARK: - Search result update
 
 extension BookmarksTableViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        
+    }
+    
     func updateSearchResultsForSearchController(searchController: UISearchController) {
-        filterContentForSearchText(searchController.searchBar.text!)
+        filterContentForSearchText(searchText: searchController.searchBar.text!)
     }
 }
 
 // implement Hashable to support Sets (and Equatable to support Hashable)
 extension BookmarkItem: Hashable, Equatable {
-    var hashValue: Int { return title.hashValue ^ description.hashValue }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(title)
+        hasher.combine(description)
+    }
 }
 func ==(lhs: BookmarkItem, rhs: BookmarkItem) -> Bool {
     return lhs.title == rhs.title && lhs.description == rhs.description

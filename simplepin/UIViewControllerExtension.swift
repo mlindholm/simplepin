@@ -11,18 +11,18 @@ import UIKit
 extension UIViewController {
 
     func alertError(title: String, message: String?) {
-        let alert = UIAlertController(title: title, message: message?.sentencecaseString, preferredStyle: UIAlertControllerStyle.Alert)
-        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Cancel, handler: nil))
-        self.presentViewController(alert, animated: true, completion: nil)
+        let alert = UIAlertController(title: title, message: message?.sentencecaseString, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+        self.present(alert, animated: true, completion: nil)
     }
 
     func alertErrorWithReachability(title: String, message: String?) {
-        var alert = UIAlertController(title: title, message: message?.sentencecaseString, preferredStyle: UIAlertControllerStyle.Alert)
+        var alert = UIAlertController(title: title, message: message?.sentencecaseString, preferredStyle: .alert)
         if Reachability.isConnectedToNetwork() == false {
-            alert = UIAlertController(title: "No Internet Connection", message: "Try again when you're back online.", preferredStyle: UIAlertControllerStyle.Alert)
+            alert = UIAlertController(title: "No Internet Connection", message: "Try again when you're back online.", preferredStyle: .alert)
         }
-        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.Cancel, handler: nil))
-        self.presentViewController(alert, animated: true, completion: nil)
+        alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: nil))
+        self.present(alert, animated: true, completion: nil)
     }
 
 }

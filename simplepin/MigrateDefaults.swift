@@ -9,16 +9,16 @@
 import Foundation
 
 func migrateUserDefaultsToAppGroups() {
-    let userDefaults = NSUserDefaults.standardUserDefaults()
-    let groupDefaults = NSUserDefaults(suiteName: "group.ml.simplepin")
+    let userDefaults = UserDefaults.standard
+    let groupDefaults = UserDefaults(suiteName: "group.ml.simplepin")
     let didMigrateToAppGroups = "DidMigrateToAppGroups"
 
     if let groupDefaults = groupDefaults {
-        if !groupDefaults.boolForKey(didMigrateToAppGroups) {
+        if !groupDefaults.bool(forKey: didMigrateToAppGroups) {
             for key in userDefaults.dictionaryRepresentation().keys {
-                groupDefaults.setObject(userDefaults.dictionaryRepresentation()[key], forKey: key)
+                groupDefaults.set(userDefaults.dictionaryRepresentation()[key], forKey: key)
             }
-            groupDefaults.setBool(true, forKey: didMigrateToAppGroups)
+            groupDefaults.set(true, forKey: didMigrateToAppGroups)
         }
     }
 }

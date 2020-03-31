@@ -15,7 +15,7 @@ protocol OptionsTableViewDelegate: class {
 class OptionsTableViewController: UITableViewController {
     weak var delegate: OptionsTableViewDelegate? = nil
     var passedBookmark = Bookmark()
-    let groupDefaults = NSUserDefaults(suiteName: "group.ml.simplepin")!
+    let groupDefaults = UserDefaults(suiteName: "group.ml.simplepin")!
 
     var descriptionCell: UITableViewCell = UITableViewCell()
     var tagsCell: UITableViewCell = UITableViewCell()
@@ -31,25 +31,25 @@ class OptionsTableViewController: UITableViewController {
 
         self.title = "Options"
 
-        self.descriptionLabel = UITextField(frame: CGRectInset(self.descriptionCell.contentView.bounds, 15, 0))
+        self.descriptionLabel = UITextField(frame: self.descriptionCell.contentView.bounds.insetBy(dx: 15, dy: 0))
         self.descriptionLabel.placeholder = "Description"
-        self.descriptionLabel.autocorrectionType = .Default
-        self.descriptionLabel.autocapitalizationType = .Sentences
+        self.descriptionLabel.autocorrectionType = .default
+        self.descriptionLabel.autocapitalizationType = .sentences
         self.descriptionCell.addSubview(self.descriptionLabel)
 
-        self.tagsLabel = UITextField(frame: CGRectInset(self.tagsCell.contentView.bounds, 15, 0))
+        self.tagsLabel = UITextField(frame: self.tagsCell.contentView.bounds.insetBy(dx: 15, dy: 0))
         self.tagsLabel.placeholder = "Tags (separated by space)"
-        self.tagsLabel.autocorrectionType = .Default
-        self.tagsLabel.autocapitalizationType = .None
+        self.tagsLabel.autocorrectionType = .default
+        self.tagsLabel.autocapitalizationType = .none
         self.tagsCell.addSubview(self.tagsLabel)
 
         self.shareCell.textLabel?.text = "Private"
-        self.privateSwitch.on = groupDefaults.boolForKey("privateByDefault")
+        self.privateSwitch.isOn = groupDefaults.bool(forKey: "privateByDefault")
         self.shareCell.accessoryView = privateSwitch
         self.shareCell.addSubview(self.privateSwitch)
 
         self.toreadCell.textLabel?.text = "Read Later"
-        self.toreadSwitch.on = groupDefaults.boolForKey("toreadByDefault")
+        self.toreadSwitch.isOn = groupDefaults.bool(forKey: "toreadByDefault")
         self.toreadCell.accessoryView = toreadSwitch
         self.toreadCell.addSubview(self.toreadSwitch)
     }
@@ -59,41 +59,40 @@ class OptionsTableViewController: UITableViewController {
         view.backgroundColor = nil
 
         descriptionLabel.text = passedBookmark.description
-        tagsLabel.text = passedBookmark.tags.joinWithSeparator(" ")
-        privateSwitch.on = passedBookmark.personal
-        toreadSwitch.on = passedBookmark.toread
+        tagsLabel.text = passedBookmark.tags.joined(separator: " ")
+        privateSwitch.isOn = passedBookmark.personal
+        toreadSwitch.isOn = passedBookmark.toread
     }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
 
-    override func viewWillDisappear(animated: Bool) {
+    override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(true)
 
         guard let description = descriptionLabel.text,
-            let tags = tagsLabel.text?.componentsSeparatedByString(" ") else { return }
+            let tags = tagsLabel.text?.components(separatedBy: " ") else { return }
 
         passedBookmark.description = description
         passedBookmark.tags = tags
-        passedBookmark.personal = privateSwitch.on
-        passedBookmark.toread = toreadSwitch.on
+        passedBookmark.personal = privateSwitch.isOn
+        passedBookmark.toread = toreadSwitch.isOn
 
-        delegate?.didEnterInformation(passedBookmark)
+        delegate?.didEnterInformation(data: passedBookmark)
     }
 
     // MARK: - Table view data source
 
-    override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
-        return 1
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        1
     }
 
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return 4
     }
-
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        switch(indexPath.row) {
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {switch(indexPath.row) {
         case 0: return self.descriptionCell
         case 1: return self.tagsCell
         case 2: return self.shareCell
@@ -101,13 +100,12 @@ class OptionsTableViewController: UITableViewController {
         default: fatalError("Unknown row in section 0")
         }
     }
-
-    override func tableView(tableView: UITableView, willDisplayCell cell: UITableViewCell, forRowAtIndexPath indexPath: NSIndexPath) {
+    
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
         cell.backgroundColor = nil
     }
-
-    override func tableView(tableView: UITableView, shouldHighlightRowAtIndexPath indexPath: NSIndexPath) -> Bool {
-        return false
+    
+    override func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
+        false
     }
-
 }
